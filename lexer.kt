@@ -42,6 +42,7 @@ sealed class Token(val regexPattern : Regex) {
     object Multiply: Token("\\*".toRegex())
     /* etc */
     object EOF: Token("\\z".toRegex())
+    object Whitespace : Token("[ \t\r\n,]".toRegex())
 }
 
 fun getAllTypes(): Map<Regex, (String) -> Token> {
@@ -88,6 +89,6 @@ fun tokenize(input: String): Collection<Token> {
             throw IllegalArgumentException("No match found")
         }
     }
-    val segments = input.split(' ', '\n', '\t', '\r') // recursive isn't it?
+    val segments = input.split(Token.Whitespace.regexPattern) // recursive isn't it?
     return segments.flatMap { _tokenize(it, 0, ArrayList()) }
 }
