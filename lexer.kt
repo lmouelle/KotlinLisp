@@ -14,32 +14,41 @@ sealed class Token(val regexPattern : Regex) {
     */
 
     /* Values */
-    class Number(val value : kotlin.Number) : Token("[0-9]+".toRegex())
-    class String(val value: kotlin.String): Token("[a-zA-Z][\\w]*".toRegex())
-    /* Chars that need balancing */
-    object LeftParan : Token("\\(".toRegex())
-    object RightParan: Token("\\)".toRegex())
-    object LeftBracket: Token("\\[".toRegex())
-    object RightBracket: Token("\\]".toRegex())
-    object LeftBrace: Token("\\{".toRegex())
-    object RightBrace: Token("\\}".toRegex())
-    /* Special forms */
-    object If: Token("if".toRegex())
-    object False : Token("false".toRegex())
-    object True : Token("true".toRegex())
-    object Def: Token("def".toRegex())
-    /* Bool ops */
-    object And: Token("and".toRegex())
-    object Or: Token("or".toRegex())
-    object LeftGreaterThan: Token(">".toRegex())
-    object LeftLessThan: Token("<".toRegex())
-    object EqualTo : Token("=".toRegex())// Structural equality
-    object Not: Token("not".toRegex())
-    /* Num ops */
-    object Add: Token("\\+".toRegex())
-    object Subtract: Token("\\-".toRegex())
-    object Divide: Token("/".toRegex())
-    object Multiply: Token("\\*".toRegex())
+    sealed class Atom(val p: Regex) : Token(p) {
+        class Number(val value : kotlin.Number) : Atom("[0-9]+".toRegex())
+        class String(val value: kotlin.String): Atom("[a-zA-Z][\\w]*".toRegex())
+        class Boolean(val value : kotlin.Boolean) : Atom("true|false".toRegex())
+    }
+    sealed class Delimiter(val p : Regex) : Token(p) {
+        object LeftParan : Delimiter("\\(".toRegex())
+        object RightParan: Delimiter("\\)".toRegex())
+        object LeftBracket: Delimiter("\\[".toRegex())
+        object RightBracket: Delimiter("\\]".toRegex())
+        object LeftBrace: Delimiter("\\{".toRegex())
+        object RightBrace: Delimiter("\\}".toRegex())
+    }
+
+    sealed class Operator(val p : Regex) : Token(p) {
+        /* Bool ops */
+        object And: Operator("and".toRegex())
+        object Or: Operator("or".toRegex())
+
+        object LeftGreaterThan: Operator(">".toRegex())
+        object LeftLessThan: Operator("<".toRegex())
+        object EqualTo : Operator("=".toRegex())// Structural equality
+        /* Num ops */
+        object Add: Operator("\\+".toRegex())
+        object Divide: Operator("/".toRegex())
+        object Subtract: Operator("\\-".toRegex())
+        object Multiply: Operator("\\*".toRegex())
+        /* Special forms */
+        object If: Token("if".toRegex())
+
+        object Def: Token("def".toRegex())
+        object Not: Token("not".toRegex())
+
+    }
+
     /* etc */
     object EOF: Token("\\z".toRegex())
     object Whitespace : Token("[ \t\r\n,]".toRegex())
@@ -47,29 +56,28 @@ sealed class Token(val regexPattern : Regex) {
 
 fun getAllTypes(): Map<Regex, (String) -> Token> {
     val mappings = mapOf<Regex, (String) -> Token> (
-            "and".toRegex() to {_ :String -> Token.And},
-            "[0-9]+".toRegex() to {s -> Token.Number(s.toInt())},
-            "[a-zA-Z][\\w]*".toRegex() to {s -> Token.String(s)},
-            "\\(".toRegex() to {_ -> Token.LeftParan},
-            "\\)".toRegex() to {_ -> Token.RightParan},
-            "\\[".toRegex() to {_ -> Token.LeftBracket},
-            "]".toRegex() to { _ -> Token.RightBracket},
-            "\\{".toRegex() to {_ -> Token.LeftBrace},
-            "}".toRegex() to { _ -> Token.RightBrace},
-            "if".toRegex() to {_ -> Token.If},
-            "false".toRegex() to {_ -> Token.False},
-            "true".toRegex() to {_ -> Token.True},
-            "def".toRegex() to {_ -> Token.Def},
-            "and".toRegex() to {_ -> Token.And},
-            "or".toRegex() to {_ -> Token.Or},
-            ">".toRegex() to {_ -> Token.LeftGreaterThan},
-            "<".toRegex() to  {_ -> Token.LeftLessThan},
-            "=".toRegex() to {_ -> Token.EqualTo},
-            "not".toRegex() to {_ -> Token.Not},
-            "\\+".toRegex() to {_ -> Token.Add},
-            "-".toRegex() to { _ -> Token.Subtract},
-            "/".toRegex() to {_ -> Token.Divide},
-            "\\*".toRegex() to {_ -> Token.Multiply},
+            "and".toRegex() to {_ :String -> Token.Operator.And },
+            "[0-9]+".toRegex() to {s -> Token.Atom.Number(s.toInt())},
+            "[a-zA-Z][\\w]*".toRegex() to {s -> Token.Atom.String(s)},
+            "\\(".toRegex() to {_ -> Token.Delimiter.LeftParan },
+            "\\)".toRegex() to {_ -> Token.Delimiter.RightParan },
+            "\\[".toRegex() to {_ -> Token.Delimiter.LeftBracket },
+            "]".toRegex() to { _ -> Token.Delimiter.RightBracket },
+            "\\{".toRegex() to {_ -> Token.Delimiter.LeftBrace },
+            "}".toRegex() to { _ -> Token.Delimiter.RightBrace },
+            "if".toRegex() to {_ -> Token.Operator.If },
+            "false|true".toRegex() to {s -> Token.Atom.Boolean(s.toBoolean())},
+            "def".toRegex() to {_ -> Token.Operator.Def },
+            "and".toRegex() to {_ -> Token.Operator.And },
+            "or".toRegex() to {_ -> Token.Operator.Or },
+            ">".toRegex() to {_ -> Token.Operator.LeftGreaterThan },
+            "<".toRegex() to  {_ -> Token.Operator.LeftLessThan },
+            "=".toRegex() to {_ -> Token.Operator.EqualTo },
+            "not".toRegex() to {_ -> Token.Operator.Not },
+            "\\+".toRegex() to {_ -> Token.Operator.Add },
+            "-".toRegex() to { _ -> Token.Operator.Subtract },
+            "/".toRegex() to {_ -> Token.Operator.Divide },
+            "\\*".toRegex() to {_ -> Token.Operator.Multiply },
             "\\z".toRegex() to {_ -> Token.EOF}
     )
     return mappings
