@@ -16,7 +16,7 @@ sealed class Token(val regexPattern : Regex) {
     /* Values */
     sealed class Atom(val p: Regex) : Token(p) {
         class Number(val value : kotlin.Number) : Atom("[0-9]+".toRegex())
-        class String(val value: kotlin.String): Atom("[a-zA-Z][\\w]*".toRegex())
+        class Identifier(val value: kotlin.String): Atom("[a-zA-Z][\\w]*".toRegex())
         class Boolean(val value : kotlin.Boolean) : Atom("true|false".toRegex())
     }
     sealed class Delimiter(val p : Regex) : Token(p) {
@@ -58,7 +58,7 @@ fun getAllTypes(): Map<Regex, (String) -> Token> {
     val mappings = mapOf<Regex, (String) -> Token> (
             "and".toRegex() to {_ :String -> Token.Operator.And },
             "[0-9]+".toRegex() to {s -> Token.Atom.Number(s.toInt())},
-            "[a-zA-Z][\\w]*".toRegex() to {s -> Token.Atom.String(s)},
+            "[a-zA-Z][\\w]*".toRegex() to {s -> Token.Atom.Identifier(s)},
             "\\(".toRegex() to {_ -> Token.Delimiter.LeftParan },
             "\\)".toRegex() to {_ -> Token.Delimiter.RightParan },
             "\\[".toRegex() to {_ -> Token.Delimiter.LeftBracket },

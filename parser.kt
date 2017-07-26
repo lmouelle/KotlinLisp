@@ -21,7 +21,7 @@ import kotlin.collections.ArrayList
 
 sealed class Expression {
     sealed class Atom : Expression() {
-        class String(val value : kotlin.String) : Atom()
+        class Identifier(val value : kotlin.String) : Atom()
         class Number(val value : kotlin.Number) : Atom()
         class Boolean(val value: kotlin.Boolean): Atom()
         sealed class Func : Atom() {
@@ -124,7 +124,7 @@ fun matchAtom(tokens: List<Token>) : ParseResult? {
         val lookahead = tokens.first()
         val rest = tokens.subList(1, tokens.size - 1)
         return when (lookahead) {
-            is Token.Atom.String -> ParseResult(rest, Expression.Atom.String(lookahead.value))
+            is Token.Atom.Identifier -> ParseResult(rest, Expression.Atom.Identifier(lookahead.value))
             else -> null
         }
     }
