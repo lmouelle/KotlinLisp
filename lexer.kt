@@ -11,6 +11,8 @@ sealed class Token(val regexPattern : Regex) {
         One thing is that the tokens are associated with data like regex,
         but that's all static. It does not change with runtime instances.
         A few values do change at runtime, but the other tokens deserve to be objects/singletons then
+
+        hm maybe this should be an enum class instead?
     */
 
     /* Values */
@@ -23,9 +25,9 @@ sealed class Token(val regexPattern : Regex) {
         object LeftParan : Delimiter("\\(".toRegex())
         object RightParan: Delimiter("\\)".toRegex())
         object LeftBracket: Delimiter("\\[".toRegex())
-        object RightBracket: Delimiter("\\]".toRegex())
+        object RightBracket: Delimiter("]".toRegex())
         object LeftBrace: Delimiter("\\{".toRegex())
-        object RightBrace: Delimiter("\\}".toRegex())
+        object RightBrace: Delimiter("}".toRegex())
     }
 
     sealed class Operator(val p : Regex) : Token(p) {
@@ -39,11 +41,10 @@ sealed class Token(val regexPattern : Regex) {
         /* Num ops */
         object Add: Operator("\\+".toRegex())
         object Divide: Operator("/".toRegex())
-        object Subtract: Operator("\\-".toRegex())
+        object Subtract: Operator("-".toRegex())
         object Multiply: Operator("\\*".toRegex())
         /* Special forms */
         object If: Token("if".toRegex())
-
         object Def: Token("def".toRegex())
         object Not: Token("not".toRegex())
 
@@ -78,25 +79,42 @@ fun getAllTypes(): Map<Regex, (String) -> Token> {
             "-".toRegex() to { _ -> Token.Operator.Subtract },
             "/".toRegex() to {_ -> Token.Operator.Divide },
             "\\*".toRegex() to {_ -> Token.Operator.Multiply },
-            "\\z".toRegex() to {_ -> Token.EOF}
+            "\\z".toRegex() to {_ -> Token.EOF},
+            "[ \t\n\r]".toRegex() to {_ -> Token.Whitespace}
     )
     return mappings
 }
 
-fun tokenize(input: String): Collection<Token> {
-    fun _tokenize(input: String, index: Int, accumulator : List<Token>) : Collection<Token> {
-        return if (index >= input.length) {
-            accumulator
-        } else {
-            for ((pattern, constructor) in getAllTypes()) {
-                val match = pattern.find(input, index)
-                if (null != match) {
-                    return _tokenize(input, match.value.length + index, accumulator + constructor.invoke(match.value))
-                }
+fun findTokenMatch(string: String): Pair<Token, Int> {
+    // find longest match
+    var candidate : Token? = null
+    var candidateRange = IntRange.EMPTY
+    var retlen = 0
+    for ((pattern, ctor) in getAllTypes()) {
+        val result = pattern.find(string)
+        if (result != null) {
+            val matchlen = result.value.length
+            if (candidate == null || matchlen > retlen) {
+                candidate = ctor(result.value)
+                retlen = matchlen
             }
-            throw IllegalArgumentException("No match found")
         }
     }
-    val segments = input.split(Token.Whitespace.regexPattern) // recursive isn't it?
-    return segments.flatMap { _tokenize(it, 0, ArrayList()) }
+    if (candidate == null) throw IllegalArgumentException("No match found for string")
+    return Pair(candidate, retlen)
+}
+
+fun tokenize(input: String): Collection<Token> {
+    // Try to match the string until I see EOF
+    val tokensCollected = ArrayList<Token>()
+    var (tok, matchLength) = findTokenMatch(input)
+    var file = input
+    while (tok !is Token.EOF) {
+        tokensCollected.add(tok)
+        file = file.substring(matchLength)
+        val t = findTokenMatch(file)
+        tok = t.first
+        matchLength = t.second
+    }
+    return tokensCollected
 }
